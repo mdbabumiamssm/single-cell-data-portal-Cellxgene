@@ -254,6 +254,12 @@ export default function Collections(): JSX.Element {
       {}
     );
 
+  // TODO(cc).
+  const [initialXState, storeXState] = useSessionStorage<[string, string][]>(
+    KEYS.FILTER_COLLECTIONS_SELECTED_ONTOLOGY_LABEL,
+    []
+  );
+
   // Table init
   const tableInstance = useTable<CollectionRow>(
     {
@@ -299,13 +305,14 @@ export default function Collections(): JSX.Element {
     setHiddenColumns,
     state: { filters },
   } = tableInstance;
-  const { categoryViews, onFilter, multiPanelSelectedUIState } =
+  const { categoryViews, onFilter, multiPanelSelectedUIState, xState } =
     useCategoryFilter(
       preFilteredRows,
       categories,
       filters,
       setFilter,
-      initialMultiPanelSelectedUIState
+      initialMultiPanelSelectedUIState,
+      initialXState
     );
 
   // Updates table hidden columns state.
@@ -317,11 +324,15 @@ export default function Collections(): JSX.Element {
   useEffect(() => {
     storeFilters(filters);
     storeMultiPanelSelectedUIState(multiPanelSelectedUIState);
+    console.log("store", Array.from(xState));
+    storeXState(Array.from(xState));
   }, [
     filters,
     multiPanelSelectedUIState,
     storeFilters,
     storeMultiPanelSelectedUIState,
+    storeXState,
+    xState,
   ]);
 
   // Handle side bar open/closed state beyond scope of component.

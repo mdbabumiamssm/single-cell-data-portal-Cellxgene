@@ -6,6 +6,7 @@ export enum KEYS {
   "FILTER_DATASETS_SELECTED_UI" = "cxg-filter-datasets-selected-ui",
   "FILTER_COLLECTIONS" = "cxg-filter-collections",
   "FILTER_COLLECTIONS_SELECTED_UI" = "cxg-filter-collections-selected-ui",
+  "FILTER_COLLECTIONS_SELECTED_ONTOLOGY_LABEL" = "cxg-filter-collections-selected-ontology-label",
   "SIDE_BAR_DATASETS" = "cxg-sidebar-datasets",
   "SIDE_BAR_COLLECTIONS" = "cxg-sidebar-collections",
 }

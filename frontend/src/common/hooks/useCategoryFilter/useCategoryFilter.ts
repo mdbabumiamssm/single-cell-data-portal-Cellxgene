@@ -12,6 +12,7 @@ import {
   buildMultiPanelUIState,
   isMultiPanelCategoryFilterConfig,
   onFilterMultiPanelCategory,
+  removeOntologyTermIdPrefix,
 } from "src/common/hooks/useCategoryFilter/common/multiPanelOntologyUtils";
 import {
   getCategoryFilter,
@@ -65,6 +66,7 @@ export interface FilterInstance {
   categoryViews: CategoryView[];
   multiPanelSelectedUIState: MultiPanelSelectedUIState;
   onFilter: OnFilterFn;
+  xState: Map<string, string>;
 }
 
 /**
@@ -89,6 +91,7 @@ type SetFilterFn = (columnId: string, updater: any) => void;
  * @param filters - Current set of selected category values (values) keyed by category (id).
  * @param setFilter - Function to update set of selected values for a category.
  * @param initialMultiPanelSelectedUIState - Selected state of category to set as an initial state.
+ * @param initialXState - Initial state of x. TODO(cc).
  * @returns Object containing filter accessor (view model of filter state) and filter mutator (function to modify react-
  * table's internal filter state).
  */
@@ -97,7 +100,8 @@ export function useCategoryFilter<T extends Categories>(
   categoryFilterIds: Set<CATEGORY_FILTER_ID>,
   filters: Filters<T>,
   setFilter: SetFilterFn,
-  initialMultiPanelSelectedUIState: MultiPanelSelectedUIState
+  initialMultiPanelSelectedUIState: MultiPanelSelectedUIState,
+  initialXState: [string, string][]
 ): FilterInstance {
   // Complete set of categories and category values for the result set.
   const [categorySet, setCategorySet] = useState<CategorySet>();
@@ -125,6 +129,11 @@ export function useCategoryFilter<T extends Categories>(
   const [multiPanelSelectedUIState, setMultiPanelSelectedUIState] =
     useState<MultiPanelSelectedUIState>(initialMultiPanelSelectedUIState);
 
+  // TODO(cc).
+  const [xState, setXState] = useState<Map<string, string>>(
+    new Map(initialXState)
+  );
+
   // Set up original, full set of categories and their values.
   useEffect(() => {
     // Only build category set if there are rows to parse category values from. Only build category set once on load.
@@ -143,9 +152,9 @@ export function useCategoryFilter<T extends Categories>(
     }
 
     setOntologyTermLabelsById(
-      keyOntologyTermLabelsById(originalRows, categoryFilterIds)
+      keyOntologyTermLabelsById(originalRows, categoryFilterIds, xState)
     );
-  }, [originalRows, categoryFilterIds, ontologyTermLabelsById]);
+  }, [originalRows, categoryFilterIds, ontologyTermLabelsById, xState]);
 
   // Build up UI hierarchies for each multi-panel category filter, used to facilitate easy calculation of selected
   // and partially selected states.
@@ -245,6 +254,12 @@ export function useCategoryFilter<T extends Categories>(
         setMultiPanelSelectedUIState(
           buildMultiPanelSelectedUIState(nextMultiPanelUIState)
         );
+        const ontologyLabel = ontologyTermLabelsById.get(
+          removeOntologyTermIdPrefix(selectedCategoryValue)
+        );
+        setXState((prevXState) =>
+          getNextXState(prevXState, selectedCategoryValue, ontologyLabel)
+        );
         setFilter(categoryFilterId, nextFilters);
         return;
       }
@@ -268,6 +283,7 @@ export function useCategoryFilter<T extends Categories>(
     ),
     multiPanelSelectedUIState,
     onFilter,
+    xState,
   };
 }
 
@@ -740,13 +756,19 @@ function keyRowOntologyTermLabelsById<T extends Categories>(
  * ontology term-backed fields (e.g. tissue).
  * @param originalRows - Original result set before filtering.
  * @param categoryFilterIds - Set of category filter IDs to include for this filter instance.
+ * @param xState - X State.
  * @returns Map of ontology term labels keyed by ID.
  */
 function keyOntologyTermLabelsById<T extends Categories>(
   originalRows: Row<T>[],
-  categoryFilterIds: Set<CATEGORY_FILTER_ID>
+  categoryFilterIds: Set<CATEGORY_FILTER_ID>,
+  xState: Map<string, string>
 ): Map<string, string> {
   const labelsById = new Map<string, string>();
+
+  xState.forEach((value, key) => {
+    labelsById.set(removeOntologyTermIdPrefix(key), value);
+  });
 
   // Collect the set of term sets across all category filters.
   const termSets = [...categoryFilterIds].reduce(
@@ -934,4 +956,28 @@ function summarizeSelectCategory<T extends Categories>(
     });
     return accum;
   }, new Map<CategoryValueId, SelectCategoryValue>());
+}
+
+/**
+ * Returns new State. TODO(cc).
+ * @param {Map<string, string>} prevState
+ * @param {string} selectedCategoryValue
+ * @param {string} ontologyLabel
+ * @returns {Map<string, string>}
+ */
+function getNextXState(
+  prevState: Map<string, string>,
+  selectedCategoryValue: string,
+  ontologyLabel?: string
+): Map<string, string> {
+  if (!ontologyLabel) {
+    return prevState;
+  }
+  const newXState = new Map(prevState);
+  if (newXState.has(selectedCategoryValue)) {
+    newXState.delete(selectedCategoryValue);
+  } else {
+    ontologyLabel && newXState.set(selectedCategoryValue, ontologyLabel);
+  }
+  return newXState;
 }

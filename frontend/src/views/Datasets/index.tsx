@@ -340,7 +340,8 @@ export default function Datasets(): JSX.Element {
     categories,
     filters,
     setFilter,
-    initialMultiPanelSelectedUIState
+    initialMultiPanelSelectedUIState,
+    []
   );
 
   // Store latest filter and multi-panel filter UI state.

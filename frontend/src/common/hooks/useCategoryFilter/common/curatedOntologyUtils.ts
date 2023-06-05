@@ -4,19 +4,19 @@ import { getCategoryFilter } from "src/common/hooks/useCategoryFilter/common/uti
 import { TOOLTIP_CATEGORY_DISABLED } from "src/components/common/Filter/common/constants";
 import {
   Categories,
+  CATEGORY_FILTER_ID,
   CategorySet,
   CategoryValueId,
-  CATEGORY_FILTER_ID,
   CuratedOntologyCategoryFilterConfig,
   FilterState,
   KeyedSelectCategoryValue,
+  ONTOLOGY_VIEW_KEY,
+  ONTOLOGY_VIEW_LABEL,
   OntologyCategoryTreeNodeView,
   OntologyCategoryTreeView,
   OntologyCategoryView,
   OntologyNode,
   OntologyTermSet,
-  ONTOLOGY_VIEW_KEY,
-  ONTOLOGY_VIEW_LABEL,
   ORGANISM,
 } from "src/components/common/Filter/common/entities";
 import {
