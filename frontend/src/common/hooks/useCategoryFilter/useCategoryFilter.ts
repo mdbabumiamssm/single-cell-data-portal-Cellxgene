@@ -766,9 +766,11 @@ function keyOntologyTermLabelsById<T extends Categories>(
 ): Map<string, string> {
   const labelsById = new Map<string, string>();
 
-  xState.forEach((value, key) => {
+  [...xState].forEach(([key, value]) => {
+    console.log(key, value);
     labelsById.set(removeOntologyTermIdPrefix(key), value);
   });
+  console.log(labelsById);
 
   // Collect the set of term sets across all category filters.
   const termSets = [...categoryFilterIds].reduce(
