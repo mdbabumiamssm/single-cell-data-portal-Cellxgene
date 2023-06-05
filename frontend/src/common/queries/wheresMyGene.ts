@@ -420,6 +420,7 @@ export function useFilterDimensions(): {
       aggregateCollectionsFromDatasets(datasets)
     ).flatMap(({ datasets }) => datasets);
 
+    // filter publicationFilter based on what's coming in from datasets
     return {
       data: {
         datasets: sortedDatasets.map((dataset) => ({
@@ -888,40 +889,11 @@ function useWMGQueryRequestBody() {
     selectedTissues,
     selectedOrganismId,
     selectedFilters,
-    selectedPublicationFilter,
   } = useContext(StateContext);
   const { data } = usePrimaryFilterDimensions();
 
   const { datasets, developmentStages, diseases, ethnicities, sexes } =
     selectedFilters;
-  const { publications } = selectedPublicationFilter;
-
-  // TODO:
-  // [x] 1. pass publication id into useManyCollections
-  // [x] 2. iterate through returned array and get the corresponding dataset ids
-  // [x] 3. find union of dataset ids
-  // [x] 4. reset 'datasets' to union of dataset ids
-
-  const { data: collections } = useManyCollections({ ids: publications });
-  const publicationDatasetIds: string[] = [];
-
-  collections?.map((collection: Collection | TombstonedCollection | null) => {
-    if (!collection || collection.tombstone) return;
-    publicationDatasetIds.push(...[...collection.datasets.keys()]);
-  });
-  // TODO: add skip for TombstonedCollections
-
-  function unionDatasetsPubs(dataset: string[], pubs: string[]) {
-    return [...new Set([...dataset, ...pubs])];
-  }
-
-  const union = unionDatasetsPubs(datasets, publicationDatasetIds);
-
-  if (datasets.length) {
-    console.log("datasets", datasets);
-    console.log("publicationDatasetIds", publicationDatasetIds);
-    console.log("UNION", union);
-  }
 
   const organismGenesByName = useMemo(() => {
     const result: { [name: string]: { id: string; name: string } } = {};
@@ -967,7 +939,7 @@ function useWMGQueryRequestBody() {
     return {
       compare,
       filter: {
-        dataset_ids: union,
+        dataset_ids: datasets,
         development_stage_ontology_term_ids: developmentStages,
         disease_ontology_term_ids: diseases,
         gene_ontology_term_ids,
@@ -990,7 +962,7 @@ function useWMGQueryRequestBody() {
     ethnicities,
     sexes,
     compare,
-    union,
+    datasets,
   ]);
 }
 
@@ -1005,11 +977,11 @@ function useWMGFiltersQueryRequestBody() {
 
   const { datasets, developmentStages, diseases, ethnicities, sexes } =
     selectedFilters;
-
   const { publications } = selectedPublicationFilter;
 
-  console.log(selectedFilters);
-  console.log(selectedPublicationFilter);
+  const { data: collections } = useManyCollections({ ids: publications });
+
+  console.log(collections);
 
   const tissuesByName = useMemo(() => {
     let result: { [name: string]: OntologyTerm } = {};
@@ -1031,14 +1003,32 @@ function useWMGFiltersQueryRequestBody() {
       return tissuesByName[tissueName].id;
     });
 
+    const publicationDatasetIds: string[] = [];
+
+    collections?.map((collection: Collection | TombstonedCollection | null) => {
+      if (!collection || collection.tombstone) return;
+      publicationDatasetIds.push(...[...collection.datasets.keys()]);
+    });
+    // TODO: add skip for TombstonedCollections
+
+    console.log("publicationDatasetIds", publicationDatasetIds);
+    console.log("datasets", datasets);
+
+    function findIntersection(a: string[], b: string[]) {
+      return a.filter((x) => b.includes(x));
+    }
+
+    const intersect = findIntersection(datasets, publicationDatasetIds);
+
+    console.log("intersect", intersect);
+
     return {
       filter: {
-        dataset_ids: datasets,
+        dataset_ids: intersect,
         development_stage_ontology_term_ids: developmentStages,
         disease_ontology_term_ids: diseases,
         organism_ontology_term_id: selectedOrganismId,
         self_reported_ethnicity_ontology_term_ids: ethnicities,
-        publicationFilter: publications,
         sex_ontology_term_ids: sexes,
         tissue_ontology_term_ids,
       },
@@ -1052,7 +1042,7 @@ function useWMGFiltersQueryRequestBody() {
     developmentStages,
     diseases,
     ethnicities,
-    publications,
+    collections,
     sexes,
   ]);
 }
