@@ -23,13 +23,13 @@ import {
 } from "src/components/common/Filter/common/constants";
 import {
   Categories,
+  CATEGORY_FILTER_ID,
   CategoryFilter,
   CategoryFilterConfig,
   CategoryFilterPanelConfig,
   CategorySet,
   CategoryValueId,
   CategoryView,
-  CATEGORY_FILTER_ID,
   CuratedOntologyCategoryFilterConfig,
   FilterKey,
   FilterState,
@@ -37,11 +37,11 @@ import {
   MultiPanelCategoryFilterUIState,
   MultiPanelSelectedUIState,
   MultiPanelUIState,
+  ON_FILTER_SOURCE,
   OnFilterFn,
+  ONTOLOGY_VIEW_KEY,
   OntologyNode,
   OntologyTermSet,
-  ONTOLOGY_VIEW_KEY,
-  ON_FILTER_SOURCE,
   Range,
   RangeCategory,
   SelectCategoryValue,
@@ -316,6 +316,45 @@ function addEmptyCategoryValues(
 }
 
 /**
+ * Add back any category values that have been filtered out, set their values to 0.
+ * @param nextFilterState - Filter state currently being built due to change in filter.
+ * @param filters - Current set of selected category values (values) keyed by category (id).
+ */
+function addObsoleteSessionStorageFilters<T extends Categories>(
+  nextFilterState: FilterState,
+  filters: Filters<T>
+) {
+  // Check filter state for each category for missing (empty) category values.
+  for (const [categoryFilterId, categoryValuesByKey] of Object.entries(
+    nextFilterState
+  )) {
+    // Adding back empty category values is only applicable to select or ontology category values.
+    if (!isSelectCategoryValue(categoryValuesByKey)) {
+      continue;
+    }
+
+    // Grab the category's session storage filter values.
+    const categoryValueIds = filters.find(
+      ({ id }) => id === categoryFilterId
+    )?.value;
+
+    // If expected category value is missing from this category's category values, add it back in with a count of 0.
+    if (categoryValueIds) {
+      for (const categoryValueId of categoryValueIds) {
+        if (!categoryValuesByKey.has(categoryValueId)) {
+          categoryValuesByKey.set(categoryValueId, {
+            categoryValueId: categoryValueId,
+            count: 0,
+            selected: false,
+            selectedPartial: false,
+          });
+        }
+      }
+    }
+  }
+}
+
+/**
  * Determine the filter type for each selected filter value and apply to rows.
  * @param originalRows - Original result set before filtering.
  * @param filters - Selected filters to apply to rows.
@@ -518,6 +557,7 @@ function buildNextFilterState<T extends Categories>(
   // Always display category values even if their count is 0; add back any category values that have been filtered out.
   // This allows us to maintain the selected state of values that are selected but possibly filtered out.
   addEmptyCategoryValues(nextFilterState, categorySet);
+  addObsoleteSessionStorageFilters(nextFilterState, filters);
 
   // Add range categories to next filter state.
   addRangeCategories(categoryFilterIds, nextFilterState, categorySet);
