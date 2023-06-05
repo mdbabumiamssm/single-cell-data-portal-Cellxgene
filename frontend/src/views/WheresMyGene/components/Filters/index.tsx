@@ -24,7 +24,10 @@ import {
   useFilterDimensions,
 } from "src/common/queries/wheresMyGene";
 import { DispatchContext, StateContext } from "../../common/store";
-import { selectFilters } from "../../common/store/actions";
+import {
+  selectFilters,
+  selectPublicationFilter,
+} from "../../common/store/actions";
 import { Filters as IFilters } from "../../common/types";
 import Organism from "./components/Organism";
 import Compare from "./components/Compare";
@@ -37,6 +40,8 @@ import {
 } from "./style";
 import ColorScale from "./components/ColorScale";
 import { ViewOptionsWrapper } from "./components/Sort/style";
+
+import { useFetchCollectionRows } from "src/common/queries/filter";
 
 const ANALYTICS_MAPPING: {
   [key in keyof IFilters]: { eventName: EVENTS; label: string };
@@ -86,10 +91,34 @@ const mapTermToFilterOption = (term: {
   };
 };
 
+const mapPublicationToFilterOption = (term: {
+  id: string;
+  summaryCitation: string;
+}): FilterOption => {
+  if (term.summaryCitation != "") {
+    return {
+      name: term.summaryCitation,
+      label: `${term.summaryCitation} (${term.id})`,
+      id: term.id,
+    };
+  } else {
+    return {
+      name: "No Publication",
+      label: `${term.summaryCitation} (${term.id})`,
+      id: term.id,
+    };
+  }
+};
+
+//made new type for the publication filter to avoid touching anything used in other files
+type availableFilters = Partial<FilterDimensions> & {
+  publicationFilter?: { id: string; name: string }[];
+};
+
 export interface Props {
   isLoading: boolean;
-  availableFilters: Partial<FilterDimensions>;
-  setAvailableFilters: Dispatch<SetStateAction<Partial<FilterDimensions>>>;
+  availableFilters: availableFilters;
+  setAvailableFilters: Dispatch<SetStateAction<availableFilters>>;
   setIsScaled: Dispatch<SetStateAction<boolean>>;
 }
 
@@ -102,7 +131,12 @@ export default memo(function Filters({
   const dispatch = useContext(DispatchContext);
   const state = useContext(StateContext);
 
-  const { selectedFilters, selectedTissues, selectedGenes } = state;
+  const {
+    selectedFilters,
+    selectedPublicationFilter,
+    selectedTissues,
+    selectedGenes,
+  } = state;
 
   const {
     datasets: datasetIds,
@@ -110,6 +144,10 @@ export default memo(function Filters({
     ethnicities,
     sexes,
   } = selectedFilters;
+
+  const { publications } = selectedPublicationFilter;
+
+  const { rows: rawPublications } = useFetchCollectionRows();
 
   const {
     data: {
@@ -152,6 +190,11 @@ export default memo(function Filters({
         : a.name.localeCompare(b.name)
     );
 
+    const newPublications = rawPublications.map(mapPublicationToFilterOption);
+    newPublications.sort((a, b) => a.name.localeCompare(b.name));
+
+    // TODO: aggregate No Publication data under one title UNLESS THEY HAVE A PREPRINT
+
     const newEthnicities = rawEthnicities.map(mapTermToFilterOption);
     newEthnicities.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -165,6 +208,7 @@ export default memo(function Filters({
       development_stage_terms: newDevelopmentStages,
       disease_terms: newDiseases,
       self_reported_ethnicity_terms: newEthnicities,
+      publicationFilter: newPublications,
       sex_terms: newSexes,
     };
 
@@ -176,6 +220,7 @@ export default memo(function Filters({
     rawDevelopmentStages,
     rawDiseases,
     rawEthnicities,
+    rawPublications,
     rawSexes,
     rawIsLoading,
     availableFilters,
@@ -186,11 +231,14 @@ export default memo(function Filters({
     datasets = EMPTY_ARRAY,
     disease_terms = EMPTY_ARRAY,
     self_reported_ethnicity_terms = EMPTY_ARRAY,
+    publicationFilter = EMPTY_ARRAY,
     sex_terms = EMPTY_ARRAY,
   } = availableFilters;
 
   const selectedDatasets = useMemo(() => {
-    return datasets.filter((dataset) => datasetIds?.includes(dataset.id));
+    console.log("SELECTED DATASETS  BEFORE FILTER", datasetIds);
+    const ret = datasets.filter((dataset) => datasetIds?.includes(dataset.id));
+    console.log("SELECTED DATASETS AFTER FILTER", ret);
   }, [datasets, datasetIds]);
 
   const selectedDiseases = useMemo(() => {
@@ -203,13 +251,23 @@ export default memo(function Filters({
     );
   }, [self_reported_ethnicity_terms, ethnicities]);
 
+  const selectedPublications = useMemo(() => {
+    // IF a publication is selected, we want to update the selectedDatasets function!!
+    return publicationFilter.filter((publication) =>
+      publications?.includes(publication.id)
+    );
+  }, [publicationFilter, publications]);
+
   const selectedSexes = useMemo(() => {
     return sex_terms.filter((sex) => sexes?.includes(sex.id));
   }, [sex_terms, sexes]);
 
-  const handleFilterChange = useCallback(
+  // (note to self): This is the function that handles the change in the filter options
+  const handlePublicationFilterChange = useCallback(
     function handleFilterChange_(
-      key: keyof IFilters
+      key: keyof (IFilters & {
+        publications?: DefaultMenuSelectOption[];
+      })
     ): (options: DefaultMenuSelectOption[] | null) => void {
       let currentOptions: DefaultMenuSelectOption[] | null = null;
 
@@ -226,6 +284,8 @@ export default memo(function Filters({
           return;
         }
 
+        console.log("HandlePublicationFilterChange:,", key, options);
+
         const newlySelected = options.filter(
           (selected) => !currentOptions?.includes(selected)
         );
@@ -233,44 +293,66 @@ export default memo(function Filters({
         // If there are newly selected filters, send an analytic event for each of them
         if (newlySelected.length) {
           newlySelected.forEach((selected) => {
-            const { eventName, label } = ANALYTICS_MAPPING[key]!;
-            track(eventName, {
-              [label]: selected.name,
-            });
+            if (key != "publications") {
+              const { eventName, label } = ANALYTICS_MAPPING[key]!;
+              track(eventName, {
+                [label]: selected.name,
+              });
+            } else {
+              const { eventName, label } = {
+                eventName: "Publication Selected!",
+                label: "publication",
+              }!;
+              console.log(eventName, selected.name, label);
+            }
           });
         }
 
         currentOptions = options;
 
-        dispatch(
-          selectFilters(
-            key,
-            options.map((option) => (option as unknown as { id: string }).id)
-          )
-        );
+        if (key == "publications") {
+          dispatch(
+            selectPublicationFilter(
+              key,
+              options.map((option) => (option as unknown as { id: string }).id)
+            )
+          );
+        } else {
+          dispatch(
+            selectFilters(
+              key,
+              options.map((option) => (option as unknown as { id: string }).id)
+            )
+          );
+        }
       };
     },
     [dispatch]
   );
 
   const handleDatasetsChange = useMemo(
-    () => handleFilterChange("datasets"),
-    [handleFilterChange]
+    () => handlePublicationFilterChange("datasets"),
+    [handlePublicationFilterChange]
   );
 
   const handleDiseasesChange = useMemo(
-    () => handleFilterChange("diseases"),
-    [handleFilterChange]
+    () => handlePublicationFilterChange("diseases"),
+    [handlePublicationFilterChange]
   );
 
   const handleEthnicitiesChange = useMemo(
-    () => handleFilterChange("ethnicities"),
-    [handleFilterChange]
+    () => handlePublicationFilterChange("ethnicities"),
+    [handlePublicationFilterChange]
   );
 
   const handleSexesChange = useMemo(
-    () => handleFilterChange("sexes"),
-    [handleFilterChange]
+    () => handlePublicationFilterChange("sexes"),
+    [handlePublicationFilterChange]
+  );
+
+  const handlePublicationsChange = useMemo(
+    () => handlePublicationFilterChange("publications"),
+    [handlePublicationFilterChange]
   );
 
   return (
@@ -320,6 +402,23 @@ export default memo(function Filters({
           DropdownMenuProps={DropdownMenuProps}
           InputDropdownProps={InputDropdownProps}
         />
+
+        {/* CAROLINE U ARE HERE  */}
+        <StyledComplexFilter
+          multiple
+          data-testid="publication-filter"
+          search
+          label="Publication"
+          options={publicationFilter as unknown as DefaultMenuSelectOption[]} //this is where to add our publication options
+          onChange={handlePublicationsChange} //handles cross filtering????
+          value={selectedPublications as unknown as DefaultMenuSelectOption[]} //takes select
+          InputDropdownComponent={
+            StyledComplexFilterInputDropdown as typeof ComplexFilterInputDropdown
+          }
+          DropdownMenuProps={DropdownMenuProps}
+          InputDropdownProps={InputDropdownProps}
+        />
+
         <StyledComplexFilter
           multiple
           data-testid="sex-filter"

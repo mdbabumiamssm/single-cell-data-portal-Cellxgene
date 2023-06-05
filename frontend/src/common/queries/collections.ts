@@ -240,6 +240,24 @@ export function useCollection({
   );
 }
 
+// Writing a new function that takes more than one id input at a time
+export function useManyCollections({
+  ids = [],
+}: {
+  ids?: string[];
+}): UseQueryResult<(Collection | TombstonedCollection | null)[]> {
+  const { data: collections } = useCollections();
+  const queryFn = fetchCollection(collections);
+
+  return useQuery<(Collection | TombstonedCollection | null)[]>(
+    [USE_COLLECTION, ids, collections],
+    () => Promise.all(ids.map((id) => queryFn(id))),
+    {
+      enabled: !!collections,
+    }
+  );
+}
+
 export async function createCollection(
   payload: string
 ): Promise<CollectionCreateResponse> {
