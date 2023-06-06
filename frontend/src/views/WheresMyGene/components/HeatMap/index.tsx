@@ -15,8 +15,11 @@ import {
   OntologyTerm,
   usePrimaryFilterDimensions,
 } from "src/common/queries/wheresMyGene";
-import { HEATMAP_CONTAINER_ID } from "../../common/constants";
-import { DispatchContext, State } from "../../common/store";
+import {
+  HEATMAP_CONTAINER_ID,
+  X_AXIS_CHART_HEIGHT_PX,
+} from "../../common/constants";
+import { DispatchContext, State, StateContext } from "../../common/store";
 import { addCellInfoCellType } from "../../common/store/actions";
 import {
   CellType,
@@ -88,6 +91,8 @@ export default memo(function HeatMap({
   setAllChartProps,
 }: Props): JSX.Element {
   useTrackHeatMapLoaded({ selectedGenes: genes, selectedTissues });
+
+  const { xAxisHeight } = useContext(StateContext);
 
   // Loading state per tissue
   const [isLoading, setIsLoading] = useState(setInitialIsLoading(cellTypes));
@@ -164,16 +169,16 @@ export default memo(function HeatMap({
 
   return (
     <ContainerWrapper>
-      <TopLeftCornerMask>
+      <TopLeftCornerMask height={xAxisHeight}>
         <CellCountLabel>Cell Count</CellCountLabel>
       </TopLeftCornerMask>
       <Container {...{ className }} id={HEATMAP_CONTAINER_ID}>
         {isLoadingAPI || isAnyTissueLoading(isLoading) ? <Loader /> : null}
         <XAxisWrapper id="x-axis-wrapper">
-          <XAxisMask data-testid="x-axis-mask" />
+          <XAxisMask data-testid="x-axis-mask" height={xAxisHeight} />
           <XAxisChart geneNames={sortedGeneNames} />
         </XAxisWrapper>
-        <YAxisWrapper>
+        <YAxisWrapper top={xAxisHeight}>
           {selectedTissues.map((tissue) => {
             const tissueCellTypes = getTissueCellTypes({
               cellTypeSortBy,
@@ -182,18 +187,20 @@ export default memo(function HeatMap({
               tissue,
             });
             return tissueCellTypes.length ? (
-              <YAxisChart
-                key={tissue}
-                tissue={tissue}
-                tissueID={tissuesByName[tissue].id}
-                cellTypes={tissueCellTypes}
-                generateMarkerGenes={generateMarkerGenes}
-                selectedOrganismId={selectedOrganismId}
-              />
+              <div id={`y-axis-${tissue}`}>
+                <YAxisChart
+                  key={tissue}
+                  tissue={tissue}
+                  tissueID={tissuesByName[tissue].id}
+                  cellTypes={tissueCellTypes}
+                  generateMarkerGenes={generateMarkerGenes}
+                  selectedOrganismId={selectedOrganismId}
+                />
+              </div>
             ) : null;
           })}
         </YAxisWrapper>
-        <ChartWrapper ref={chartWrapperRef}>
+        <ChartWrapper ref={chartWrapperRef} top={xAxisHeight}>
           {selectedTissues.map((tissue) => {
             const tissueCellTypes = getTissueCellTypes({
               cellTypeSortBy,
@@ -210,7 +217,17 @@ export default memo(function HeatMap({
              * the chart, because it will cause the chart to render with 0 width,
              * which is an error for echarts
              */
-            if (!selectedGeneData?.length) return null;
+
+            if (!selectedGeneData?.length) {
+              const height =
+                document.getElementById(`y-axis-${tissue}`)?.clientHeight ?? 0;
+              return (
+                <div
+                  key={`y-axis-${tissue}`}
+                  style={{ height: `${height + X_AXIS_CHART_HEIGHT_PX}px` }}
+                />
+              );
+            }
 
             return (
               <Chart

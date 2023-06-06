@@ -1,5 +1,5 @@
 import isEqual from "lodash/isEqual";
-import { CompareId } from "../constants";
+import { CompareId, X_AXIS_CHART_HEIGHT_PX } from "../constants";
 import { CellType, SORT_BY } from "../types";
 
 export interface PayloadAction<Payload> {
@@ -10,7 +10,7 @@ export interface State {
   genesToDelete: string[];
   selectedGenes: string[];
   selectedOrganismId: string | null;
-  selectedTissues: string[];
+  selectedTissues?: string[];
   selectedFilters: {
     datasets: string[];
     developmentStages: string[];
@@ -37,6 +37,7 @@ export interface State {
   } | null;
   geneInfoGene: string | null;
   compare?: CompareId;
+  xAxisHeight: number;
 }
 
 const EMPTY_FILTERS: State["selectedFilters"] = {
@@ -69,6 +70,7 @@ export const INITIAL_STATE: State = {
     genes: SORT_BY.USER_ENTERED,
     scaled: SORT_BY.COLOR_SCALED,
   },
+  xAxisHeight: X_AXIS_CHART_HEIGHT_PX,
 };
 
 export const REDUCERS = {
@@ -80,6 +82,7 @@ export const REDUCERS = {
   addSelectedGenes,
   deleteSelectedGenes,
   deleteSingleGene,
+  deleteAllGenes,
   loadStateFromURL,
   selectCompare,
   resetGenesToDelete,
@@ -92,6 +95,7 @@ export const REDUCERS = {
   selectTissues,
   setSnapshotId,
   toggleGeneToDelete,
+  setXAxisHeight,
 };
 
 export function reducer(state: State, action: PayloadAction<unknown>): State {
@@ -135,6 +139,15 @@ function deleteSingleGene(
   return {
     ...state,
     selectedGenes: newSelectedGenes,
+    xAxisHeight: X_AXIS_CHART_HEIGHT_PX,
+  };
+}
+
+function deleteAllGenes(state: State, _: PayloadAction<null>): State {
+  return {
+    ...state,
+    selectedGenes: [],
+    xAxisHeight: X_AXIS_CHART_HEIGHT_PX,
   };
 }
 
@@ -390,7 +403,7 @@ export interface LoadStateFromURLPayload {
   compare: State["compare"];
   filters: Partial<State["selectedFilters"]>;
   organism: State["selectedOrganismId"];
-  tissues: State["selectedTissues"];
+  tissues?: State["selectedTissues"];
   genes: State["selectedGenes"];
 }
 
@@ -419,5 +432,12 @@ function selectCompare(
   return {
     ...state,
     compare: action.payload,
+  };
+}
+
+function setXAxisHeight(state: State, action: PayloadAction<number>): State {
+  return {
+    ...state,
+    xAxisHeight: action.payload,
   };
 }

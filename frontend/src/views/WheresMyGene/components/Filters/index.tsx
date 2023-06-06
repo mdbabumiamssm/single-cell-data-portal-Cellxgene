@@ -4,7 +4,7 @@ import {
   DefaultMenuSelectOption,
   InputDropdownProps,
   Tooltip,
-} from "czifui";
+} from "@czi-sds/components";
 import isEqual from "lodash/isEqual";
 import {
   Dispatch,
@@ -40,6 +40,7 @@ import {
 } from "./style";
 import ColorScale from "./components/ColorScale";
 import { ViewOptionsWrapper } from "./components/Sort/style";
+import { useRouter } from "next/router";
 
 import { useFetchCollectionRows } from "src/common/queries/filter";
 
@@ -144,6 +145,8 @@ export default memo(function Filters({
     ethnicities,
     sexes,
   } = selectedFilters;
+  const { pathname } = useRouter();
+  const isVersion2 = pathname.includes("v2");
 
   const { publications } = selectedPublicationFilter;
 
@@ -158,9 +161,11 @@ export default memo(function Filters({
       sex_terms: rawSexes,
     },
     isLoading: rawIsLoading,
-  } = useFilterDimensions();
+  } = useFilterDimensions(isVersion2 ? 2 : 1);
 
-  const isHeatmapShown = !!selectedTissues.length && !!selectedGenes.length;
+  const isHeatmapShown =
+    (!selectedTissues || (selectedTissues && !!selectedTissues.length)) &&
+    !!selectedGenes.length;
 
   const InputDropdownProps = {
     sdsStyle: "minimal",
