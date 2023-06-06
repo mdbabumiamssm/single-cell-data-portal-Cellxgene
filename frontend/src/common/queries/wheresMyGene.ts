@@ -1009,7 +1009,6 @@ function useWMGFiltersQueryRequestBody() {
       if (!collection || collection.tombstone) return;
       publicationDatasetIds.push(...[...collection.datasets.keys()]);
     });
-    // TODO: add skip for TombstonedCollections
 
     console.log("publicationDatasetIds", publicationDatasetIds);
     console.log("datasets", datasets);

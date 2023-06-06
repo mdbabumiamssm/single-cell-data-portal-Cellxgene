@@ -240,7 +240,7 @@ export function useCollection({
   );
 }
 
-// Writing a new function that takes more than one id input at a time
+// Writing a new function that takes more than one collection id input at a time
 export function useManyCollections({
   ids = [],
 }: {
