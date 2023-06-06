@@ -11,11 +11,11 @@ import {
 } from "src/components/common/Filter/common/constants";
 import {
   Categories,
+  CATEGORY_FILTER_ID,
   CategoryFilter,
   CategoryFilterConfig,
   CategoryFilterPanelConfig,
   CategoryValueId,
-  CATEGORY_FILTER_ID,
   KeyedSelectCategoryValue,
   MultiPanelCategoryFilterUIState,
   MultiPanelOntologyCategoryView,
@@ -23,9 +23,9 @@ import {
   MultiPanelSelectedUIState,
   MultiPanelUINode,
   MultiPanelUIState,
+  ON_FILTER_SOURCE,
   OntologyDescendants,
   OntologyPanelCategoryView,
-  ON_FILTER_SOURCE,
   OrFilterPrefix,
   SelectCategoryValue,
   SelectCategoryValueView,
@@ -1094,10 +1094,12 @@ export function onFilterMultiPanelCategory(
 ): [MultiPanelUIState, CategoryValueId[]] {
   // Model the selected values for this category filter in a react-table filters format.
   const currentFilters = buildMultiPanelCurrentFilters(multiPanelUIState);
+  console.log("current filters", currentFilters);
 
   // Grab the UI model backing this category.
   const { categoryFilterId } = config;
   const categoryFilterUIState = multiPanelUIState.get(categoryFilterId);
+  console.log("categoryFilterUIState", categoryFilterUIState);
   if (!categoryFilterUIState) {
     return [multiPanelUIState, []]; // Error state
   }

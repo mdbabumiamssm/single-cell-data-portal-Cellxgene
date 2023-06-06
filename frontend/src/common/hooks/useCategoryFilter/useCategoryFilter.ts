@@ -169,6 +169,7 @@ export function useCategoryFilter<T extends Categories>(
       categoryFilterIds,
       initialMultiPanelSelectedUIState
     );
+    console.log("multiPanelUIState", uiState);
     setMultiPanelUIState(uiState);
   }, [
     categoryFilterIds,
