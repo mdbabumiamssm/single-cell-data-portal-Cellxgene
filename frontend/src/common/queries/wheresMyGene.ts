@@ -420,6 +420,8 @@ export function useFilterDimensions(version: 1 | 2 = 1): {
   data: FilterDimensions;
   isLoading: boolean;
 } {
+  console.log(version);
+
   // Extracting row metadata from collections
   const { rows: rawPublications } = useFetchCollectionRows(
     VIEW_MODE.DEFAULT,
