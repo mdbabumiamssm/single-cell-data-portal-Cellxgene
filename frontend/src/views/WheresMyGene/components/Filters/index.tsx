@@ -43,6 +43,7 @@ import { ViewOptionsWrapper } from "./components/Sort/style";
 import { useRouter } from "next/router";
 
 import { useFetchCollectionRows } from "src/common/queries/filter";
+import { VIEW_MODE } from "src/common/hooks/useViewMode";
 
 const ANALYTICS_MAPPING: {
   [key in keyof IFilters]: { eventName: EVENTS; label: string };
@@ -150,7 +151,10 @@ export default memo(function Filters({
 
   const { publications } = selectedPublicationFilter;
 
-  const { rows: rawPublications } = useFetchCollectionRows();
+  const { rows: rawPublications } = useFetchCollectionRows(
+    VIEW_MODE.DEFAULT,
+    "success"
+  );
 
   const {
     data: {
