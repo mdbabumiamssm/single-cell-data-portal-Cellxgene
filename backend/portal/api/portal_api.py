@@ -194,16 +194,13 @@ def _dataset_to_response(
             "created_at": dataset.created_at,
             "dataset_assets": [_dataset_asset_to_response(a, dataset.version_id.id) for a in dataset.artifacts],
             "dataset_deployments": dataset_deployments,
+            "dataset_id": dataset.dataset_id.id, 
             "development_stage": None
             if dataset.metadata is None
             else _ontology_term_ids_to_response(dataset.metadata.development_stage),
             "disease": None if dataset.metadata is None else _ontology_term_ids_to_response(dataset.metadata.disease),
             "donor_id": None if dataset.metadata is None else dataset.metadata.donor_id,
             "id": dataset_id, #change to "dataset_version_id" = dataset_id 
-            "dataset_id": dataset.dataset_id.id # add in: "dataset_id" = dataset id 
-            # all usages of "id" should become "dataset_version_id" --> find all endpoints downstream
-            # run End to end tests to fill in buggy gaps 
-            # change publication function to grab 'dataset id' instead of 'dataset_version_id'
             "is_primary_data": None if dataset.metadata is None else dataset.metadata.is_primary_data,
             "is_valid": True,  # why do we have this
             "mean_genes_per_cell": None if dataset.metadata is None else dataset.metadata.mean_genes_per_cell,
