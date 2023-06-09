@@ -27,18 +27,18 @@ fi
 cd $SCRIPTS_DIR/..
 make db/dump OUTFILE=$DB_DUMP_FILE
 
-export DEPLOYMENT_STAGE=$DEST_ENV
+export DEPLOYMENT_STAGE=dev
 export AWS_PROFILE=single-cell-dev
 
 #  For safety, also dump the destination db to a local file, just in case.
-DEST_DB_BACKUP_DUMP_FILE="${DEST_ENV}_"`date +%Y%m%d_%H%M%S`".sqlc"
-echo "Backing up the destination database to $DEST_DB_BACKUP_DUMP_FILE. Just in case!"
-make db/dump OUTFILE=$DEST_DB_BACKUP_DUMP_FILE
+#DEST_DB_BACKUP_DUMP_FILE="${DEST_ENV}_"`date +%Y%m%d_%H%M%S`".sqlc"
+#echo "Backing up the destination database to $DEST_DB_BACKUP_DUMP_FILE. Just in case!"
+#make db/dump OUTFILE=$DEST_DB_BACKUP_DUMP_FILE
 
-DB_PW=`aws secretsmanager get-secret-value --secret-id corpora/backend/${DEPLOYMENT_STAGE}/database --region us-west-2 | jq -r '.SecretString | match(":([^:]*)@").captures[0].string'`
-
-DB_NAME="corpora_${DEPLOYMENT_STAGE}"
-DB_USER=corpora_${DEPLOYMENT_STAGE}
+DB_PW=`aws secretsmanager get-secret-value --secret-id corpora/backend/rdev/database --region us-west-2 | jq -r '.SecretString | match(":([^:]*)@").captures[0].string'`
+DEPLOYMENT_STAGE=rdev
+DB_NAME="/dan-for-cchoi"
+DB_USER=dataportal
 
 read -n 1 -p "ATTENTION: Proceed to replace the destination database \"${DB_NAME}\"? (Y/n) " ANS
 echo
@@ -48,10 +48,10 @@ make db/tunnel/up
 PGPASSWORD=${DB_PW} pg_restore --clean --if-exists --no-owner --no-privileges --no-comments --dbname=${DB_NAME} --host 0.0.0.0 --username ${DB_USER} --schema=persistence_schema ${DB_DUMP_FILE}
 make db/tunnel/down
 
-DB_UPDATE_CMDS=$(cat <<EOF
--c "UPDATE persistence_schema.\"DatasetArtifact\" SET uri = regexp_replace(uri, '(s3:\\/\\/)([[:alpha:]]+-[[:alpha:]]+-)([[:alpha:]]+)(\\/.+)', '\\1\\2${DEPLOYMENT_STAGE}\\4') WHERE uri IS NOT NULL;"
-EOF
-)
-                 
-make db/connect ARGS="${DB_UPDATE_CMDS}"
+#DB_UPDATE_CMDS=$(cat <<EOF
+#-c "UPDATE persistence_schema.\"DatasetArtifact\" SET uri = regexp_replace(uri, '(s3:\\/\\/)([[:alpha:]]+-[[:alpha:]]+-)([[:alpha:]]+)(\\/.+)', '\\1\\2${DEPLOYMENT_STAGE}\\4') WHERE uri IS NOT NULL;"
+#EOF
+#)
+#
+#make db/connect ARGS="${DB_UPDATE_CMDS}"
 
