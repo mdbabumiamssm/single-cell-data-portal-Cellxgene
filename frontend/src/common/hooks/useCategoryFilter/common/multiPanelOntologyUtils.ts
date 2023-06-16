@@ -104,11 +104,12 @@ export function buildInferredOntologyTermId(ontologyTermId: string): string {
  * @param ontologyTermLabelsById - Set of ontology term labels keyed by term ID, used to determine labels for ontology
  * @returns Multi-panel category view model.
  */
-export function buildMultiPanelCategoryView(
+export function buildMultiPanelCategoryView<T extends Categories>(
   config: MultiPanelOntologyFilterConfig,
   categoryValuesByValue: KeyedSelectCategoryValue,
   multiPanelUIState: MultiPanelUIState,
-  ontologyTermLabelsById: Map<string, string>
+  ontologyTermLabelsById: Map<string, string>,
+  filters: Filters<T>
 ): MultiPanelOntologyCategoryView {
   const { categoryFilterId } = config;
   const categoryFilterUIState = multiPanelUIState.get(categoryFilterId);
@@ -143,6 +144,19 @@ export function buildMultiPanelCategoryView(
     allCategoryValueViews,
     categoryFilterUIState
   );
+  const filtersX = filters.filter(({ id }) => id === categoryFilterId);
+  for (const { value } of filtersX) {
+    for (const v of value) {
+      const selectedView = selectedViews.find(
+        ({ categoryValueId }) => categoryValueId === v
+      );
+      if (selectedView) {
+        console.log("selected view", selectedView);
+      } else {
+        console.log("not a selected view!", v);
+      }
+    }
+  }
 
   // Build view model of multi-panel category.
   return {
@@ -1094,12 +1108,10 @@ export function onFilterMultiPanelCategory(
 ): [MultiPanelUIState, CategoryValueId[]] {
   // Model the selected values for this category filter in a react-table filters format.
   const currentFilters = buildMultiPanelCurrentFilters(multiPanelUIState);
-  console.log("current filters", currentFilters);
 
   // Grab the UI model backing this category.
   const { categoryFilterId } = config;
   const categoryFilterUIState = multiPanelUIState.get(categoryFilterId);
-  console.log("categoryFilterUIState", categoryFilterUIState);
   if (!categoryFilterUIState) {
     return [multiPanelUIState, []]; // Error state
   }

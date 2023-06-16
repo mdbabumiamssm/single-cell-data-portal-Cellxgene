@@ -169,7 +169,6 @@ export function useCategoryFilter<T extends Categories>(
       categoryFilterIds,
       initialMultiPanelSelectedUIState
     );
-    console.log("multiPanelUIState", uiState);
     setMultiPanelUIState(uiState);
   }, [
     categoryFilterIds,
@@ -278,6 +277,7 @@ export function useCategoryFilter<T extends Categories>(
 
   return {
     categoryViews: buildCategoryViews(
+      filters,
       filterState,
       multiPanelUIState,
       ontologyTermLabelsById
@@ -481,13 +481,15 @@ function buildCategorySet<T extends Categories>(
 
 /**
  * Build view-specific models from filter state, to facilitate easy rendering.
+ * @param filters - Filters to apply to rows.
  * @param filterState - Categories, category value and their counts with the current filter applied.
  * @param multiPanelUIState - Current set of category values that the user has selected in multi-panel category filters.
  * @param ontologyTermLabelsById - Set of ontology term labels keyed by term ID, used to determine labels for ontology
  * terms.
  * @returns Array of category views objects.
  */
-function buildCategoryViews(
+function buildCategoryViews<T extends Categories>(
+  filters: Filters<T>,
   filterState?: FilterState,
   multiPanelUIState?: MultiPanelUIState,
   ontologyTermLabelsById?: Map<string, string>
@@ -539,7 +541,8 @@ function buildCategoryViews(
         config,
         rangeOrSelectValue as KeyedSelectCategoryValue,
         multiPanelUIState,
-        ontologyTermLabelsById
+        ontologyTermLabelsById,
+        filters
       );
     })
     .filter((categoryView): categoryView is CategoryView => !!categoryView)
@@ -768,10 +771,8 @@ function keyOntologyTermLabelsById<T extends Categories>(
   const labelsById = new Map<string, string>();
 
   [...xState].forEach(([key, value]) => {
-    console.log(key, value);
     labelsById.set(removeOntologyTermIdPrefix(key), value);
   });
-  console.log(labelsById);
 
   // Collect the set of term sets across all category filters.
   const termSets = [...categoryFilterIds].reduce(

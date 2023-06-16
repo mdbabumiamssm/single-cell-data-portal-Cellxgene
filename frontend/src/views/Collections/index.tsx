@@ -324,7 +324,6 @@ export default function Collections(): JSX.Element {
   useEffect(() => {
     storeFilters(filters);
     storeMultiPanelSelectedUIState(multiPanelSelectedUIState);
-    console.log("store", Array.from(xState));
     storeXState(Array.from(xState));
   }, [
     filters,
