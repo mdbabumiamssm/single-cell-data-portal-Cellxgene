@@ -37,7 +37,7 @@ export AWS_PROFILE=single-cell-dev
 
 DB_PW=`aws secretsmanager get-secret-value --secret-id corpora/backend/rdev/database --region us-west-2 | jq -r '.SecretString | match(":([^:]*)@").captures[0].string'`
 DEPLOYMENT_STAGE=rdev
-DB_NAME="/dan-for-cchoi"
+DB_NAME="/schema-mig-2"
 DB_USER=dataportal
 
 read -n 1 -p "ATTENTION: Proceed to replace the destination database \"${DB_NAME}\"? (Y/n) " ANS
