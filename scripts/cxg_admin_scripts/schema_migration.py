@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 
 from backend.layers.common.entities import CollectionVersionId, DatasetId
-from backend.layers.processing.schema_migration import SchemaMigrate
 
 logger = logging.getLogger(__name__)
 
@@ -23,18 +22,19 @@ def rollback_dataset(ctx, report_path: Path):
 def publish_migrated_collection(ctx, report_path: Path):
     """
 
-    need to set ARTIFACT_BUCKET, EXECUTION_ID env var
+    need to set ARTIFACT_BUCKET, env var
 
     :param report_path:
     :return:
     """
-    schema_migrate = SchemaMigrate(ctx.obj["business_logic"])
+    bl = ctx.obj["business_logic"]
 
     with report_path.open("r") as f:
         report = json.load(f)
     for entry in report:
         try:
             # Need to add a filter to the report to only publish collections that failed publish_collection_version
-            schema_migrate.publish_and_cleanup()
+            bl.publish_collection_version(CollectionVersionId(entry["collection_version_id"]))
         except Exception:
             logger.exception("Error publishing collection: %s", entry)
+        # clean up all */migrate.h5ad from s3.
