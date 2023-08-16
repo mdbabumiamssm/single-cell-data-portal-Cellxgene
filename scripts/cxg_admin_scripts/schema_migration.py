@@ -30,8 +30,9 @@ def publish_migrated_collection(ctx, report_path: Path):
         report = json.load(f)
     for entry in report:
         try:
-            # Need to add a filter to the report to only publish collections that failed publish_collection_version
-            bl.publish_collection_version(CollectionVersionId(entry["collection_version_id"]))
+            if True:  # Need to add a filter to the report to only publish collections that failed
+                # publish_collection_version
+                bl.publish_collection_version(CollectionVersionId(entry["collection_version_id"]))
         except Exception:
             logger.exception("Error publishing collection: %s", entry)
         # clean up all */migrate.h5ad from s3.
