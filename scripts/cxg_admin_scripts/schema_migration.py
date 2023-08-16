@@ -21,9 +21,6 @@ def rollback_dataset(ctx, report_path: Path):
 
 def publish_migrated_collection(ctx, report_path: Path):
     """
-
-    need to set ARTIFACT_BUCKET, env var
-
     :param report_path:
     :return:
     """
