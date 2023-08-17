@@ -810,6 +810,7 @@ def get_dataset_identifiers(url: str):
     """
     Return a set of dataset identifiers. This endpoint is meant to be used by single-cell-explorer.
     """
+    print(f"djh get_dataset_identifiers url {url}")
     try:
         path = urlparse(url).path
         _id = [segment for segment in path.split("/") if segment][-1].removesuffix(".cxg")
@@ -817,8 +818,9 @@ def get_dataset_identifiers(url: str):
         raise ServerErrorHTTPException("Cannot parse URL") from None
 
     validate_uuid_else_forbidden(_id)
-
+    print(f"djh validated uuid {_id}")
     dataset = get_business_logic().get_dataset_version(DatasetVersionId(_id))
+    print(f"djh is tombstoned? {dataset.canonical_dataset.tombstoned if dataset else None}")
     if dataset is None:
         # Lookup from canonical if the version cannot be found
         try:
@@ -835,7 +837,7 @@ def get_dataset_identifiers(url: str):
     collection = get_business_logic().get_collection_version_from_canonical(dataset.collection_id)
     if collection is None:  # orphaned datasets - shouldn't happen, but we should return 404 just in case
         raise NotFoundHTTPException()
-
+    print(f"djh dv is is {dataset.version_id} and collection.datasets is {[d.version_id for d in collection.datasets]}")
     if dataset.version_id not in [d.version_id for d in collection.datasets]:
         # If the dataset is not in the mapped collection version, it means the dataset belongs to the active
         # unpublished version. We should return that one
@@ -843,7 +845,7 @@ def get_dataset_identifiers(url: str):
 
     if collection is None:  # again, orphaned datasets
         raise NotFoundHTTPException()
-
+    print(f"djh made it here for {_id}")
     collection_id, dataset_id = collection.version_id.id, dataset.version_id.id
 
     # Retrieves the URI of the cxg artifact
