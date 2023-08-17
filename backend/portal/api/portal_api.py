@@ -854,6 +854,6 @@ def get_dataset_identifiers(url: str):
         "dataset_id": dataset_id,
         "collection_id": collection_id,
         "collection_visibility": "PUBLIC" if collection.published_at is not None else "PRIVATE",
-        "tombstoned": False,  # No longer applicable
+        "tombstoned": dataset.canonical_dataset.tombstoned,  # No longer applicable
     }
     return make_response(jsonify(dataset_identifiers), 200)
