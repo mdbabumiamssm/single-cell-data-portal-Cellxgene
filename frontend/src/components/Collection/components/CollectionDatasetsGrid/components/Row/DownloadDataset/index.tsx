@@ -1,14 +1,10 @@
-import { Spinner } from "@blueprintjs/core";
-import * as React from "react";
-import { FC, useCallback } from "react";
+import React, { ElementType, useState } from "react";
 import { useDatasetAssets } from "src/components/Collection/components/CollectionDatasetsGrid/components/Row/DownloadDataset/util";
-import Content from "src/components/Collections/components/Dataset/components/DownloadDataset/components/Content";
-import { StyledButton } from "src/components/Collections/components/Dataset/components/DownloadDataset/style";
-import Modal from "src/components/common/Modal";
-import { ModalContentWrapper } from "./style";
+import Content from "src/components/Datasets/components/DownloadDataset/components/Content";
+import { Dialog } from "src/components/Datasets/components/DownloadDataset/style";
 
 interface Props {
-  Button?: React.ElementType;
+  Button: ElementType;
   datasetId: string;
   isDisabled?: boolean;
   name: string;
@@ -20,19 +16,18 @@ interface Props {
  * assets are not included in the "light" datasets/index endpoint that backs the table and are therefore fetched on
  * demand.
  */
-const DownloadDataset: FC<Props> = ({
-  Button = StyledButton,
+export default function DownloadDataset({
+  Button,
   datasetId,
   isDisabled = false,
   name,
-}) => {
-  // Open state of download modal.
-  const [isOpen, setIsOpen] = React.useState(false);
+}: Props): JSX.Element {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  // Function toggling open state of modal.
-  const toggleOpen = useCallback(() => {
-    setIsOpen(!isOpen);
-  }, [isOpen]);
+  // Close modal.
+  const closeModal = () => {
+    setIsOpen(false);
+  };
 
   // Fetch the dataset assets on open of download modal.
   const { datasetAssets, isError, isLoading } = useDatasetAssets(
@@ -44,37 +39,19 @@ const DownloadDataset: FC<Props> = ({
     <>
       <Button
         datasetName={name}
-        disabled={isDisabled}
-        onClick={toggleOpen}
         data-testid="dataset-download-button"
+        disabled={isDisabled}
+        onClick={() => setIsOpen(true)}
       />
-      <Modal
-        title="Download Dataset"
-        isCloseButtonShown={false}
-        isOpen={isOpen}
-        onClose={toggleOpen}
-        className={isLoading || isError ? "modal-loading" : undefined}
-      >
-        {isLoading ? (
-          <ModalContentWrapper>
-            <Spinner size={20} />
-          </ModalContentWrapper>
-        ) : null}
-        {isError ? (
-          <ModalContentWrapper>
-            Dataset download is currently not available.
-          </ModalContentWrapper>
-        ) : null}
-        {!isLoading && !isError ? (
-          <Content
-            name={name}
-            dataAssets={datasetAssets}
-            onClose={toggleOpen}
-          />
-        ) : null}
-      </Modal>
+      <Dialog onClose={closeModal} open={isOpen}>
+        <Content
+          isError={isError}
+          isLoading={isLoading}
+          name={name}
+          dataAssets={datasetAssets}
+          onClose={closeModal}
+        />
+      </Dialog>
     </>
   );
-};
-
-export default DownloadDataset;
+}
