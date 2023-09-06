@@ -5,7 +5,7 @@ import { Code, CodeMask, CodeWrapper, Tip } from "./style";
 
 const DISCOVER_API_URL = "https://api.cellxgene.cziscience.com/curation/ui/#/";
 const SCHEMA_URL =
-  "https://github.com/chanzuckerberg/single-cell-curation/tree/main/schema/3.1.0";
+  "https://github.com/chanzuckerberg/single-cell-curation/blob/main/schema/3.1.0/schema.md";
 
 interface Props {
   fileName: string;
