@@ -1,6 +1,7 @@
 import { FC, ReactNode } from "react";
 import { DialogLoader } from "src/components/Datasets/components/DownloadDataset/style";
-import { FormControl, FormLabel } from "@mui/material";
+import { FormLabel } from "@mui/material";
+import { FormControl } from "./style";
 
 export const PROMPT_TEXT =
   "Select one of the data formats to view its download details.";
