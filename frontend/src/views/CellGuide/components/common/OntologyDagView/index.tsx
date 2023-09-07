@@ -34,8 +34,6 @@ import { useFullScreen } from "../FullScreenProvider";
 import {
   defaultMargin,
   backgroundColor,
-  DEFAULT_ONTOLOGY_HEIGHT,
-  DEFAULT_ONTOLOGY_WIDTH,
   NODE_SPACINGS,
 } from "./common/constants";
 import { TreeNodeWithState } from "./common/types";
@@ -43,21 +41,17 @@ import Legend from "./components/Legend";
 import AnimatedNodes from "./components/AnimatedNodes";
 import AnimatedLinks from "./components/AnimatedLinks";
 import {
-  LEFT_RIGHT_PADDING_PX,
-  LEFT_RIGHT_PADDING_PX_SKINNY_MODE,
-  SIDEBAR_COLUMN_GAP_PX,
-} from "../../CellGuideCard/style";
-import {
   CELL_GUIDE_CARD_ONTOLOGY_DAG_VIEW,
   CELL_GUIDE_CARD_ONTOLOGY_DAG_VIEW_FULLSCREEN_BUTTON,
   CELL_GUIDE_CARD_ONTOLOGY_DAG_VIEW_HOVER_CONTAINER,
   CELL_GUIDE_CARD_ONTOLOGY_DAG_VIEW_TOOLTIP,
+  MINIMUM_NUMBER_OF_HIDDEN_CHILDREN_FOR_DUMMY_NODE,
 } from "src/views/CellGuide/components/common/OntologyDagView/constants";
 
 interface BaseTreeProps {
   skinnyMode?: boolean;
-  initialWidth?: number;
-  initialHeight?: number;
+  inputWidth: number;
+  inputHeight: number;
 }
 
 interface CellTypeIdProps extends BaseTreeProps {
@@ -95,16 +89,11 @@ export default function OntologyDagView({
   cellTypeId,
   tissueId,
   tissueName,
-  skinnyMode,
-  initialHeight,
-  initialWidth,
+  inputWidth,
+  inputHeight,
 }: TreeProps) {
-  skinnyMode = cellTypeId ? skinnyMode : true;
-  const defaultHeight = initialHeight ?? DEFAULT_ONTOLOGY_HEIGHT;
-  const defaultWidth = initialWidth ?? DEFAULT_ONTOLOGY_WIDTH;
-
-  const [width, setWidth] = useState(defaultWidth);
-  const [height, setHeight] = useState(defaultHeight);
+  const [width, setWidth] = useState(inputWidth);
+  const [height, setHeight] = useState(inputHeight);
 
   const [initialTransformMatrix, setInitialTransformMatrix] = useState<
     typeof initialTransformMatrixDefault
@@ -115,10 +104,6 @@ export default function OntologyDagView({
   // take effect.
   const [centeredNodeCoords, setCenteredNodeCoords] = useState<boolean>(false);
 
-  // This is used to store the desired resized width of the ontology view
-  // while full screen mode is active.
-  const [resizeWidth, setResizeWidth] = useState(defaultWidth);
-
   const {
     isFullScreen,
     screenDimensions,
@@ -126,41 +111,10 @@ export default function OntologyDagView({
     disableFullScreen,
   } = useFullScreen();
 
-  // Handle the resizing of the ontology view when the screen is resized
-  useEffect(() => {
-    const skinnyAdjustment = skinnyMode ? 0 : SIDEBAR_COLUMN_GAP_PX + 240;
-
-    const leftRightPadding = skinnyMode
-      ? LEFT_RIGHT_PADDING_PX_SKINNY_MODE
-      : LEFT_RIGHT_PADDING_PX;
-
-    const width = Math.min(
-      defaultWidth,
-      window.innerWidth - leftRightPadding * 2 - skinnyAdjustment
-    );
-    setResizeWidth(width);
-    if (!isFullScreen) setWidth(width);
-
-    const handleResize = () => {
-      const skinnyAdjustment = skinnyMode ? 0 : SIDEBAR_COLUMN_GAP_PX + 240;
-
-      // Account for the padding on the left and right of the CellGuideCard component
-      const width = Math.min(
-        defaultWidth,
-        window.innerWidth - leftRightPadding * 2 - skinnyAdjustment
-      );
-      // Always set the resize width, but only set the width if not in full screen mode
-      setResizeWidth(width);
-      if (!isFullScreen) setWidth(width);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [isFullScreen, skinnyMode, defaultWidth]);
-
   // Handle the resizing of the ontology view when full screen mode is toggled
   useEffect(() => {
-    let newWidth = resizeWidth;
-    let newHeight = defaultHeight;
+    let newWidth = inputWidth;
+    let newHeight = inputHeight;
     if (screenDimensions.width > 0 && isFullScreen) {
       newWidth = screenDimensions.width;
     }
@@ -169,7 +123,7 @@ export default function OntologyDagView({
     }
     setWidth(newWidth);
     setHeight(newHeight);
-  }, [screenDimensions, isFullScreen, resizeWidth, defaultHeight]);
+  }, [screenDimensions, isFullScreen, inputWidth, inputHeight]);
 
   // This is used to trigger a re-render of the ontology view
   const [triggerRender, setTriggerRender] = useState(false);
@@ -190,44 +144,16 @@ export default function OntologyDagView({
   const { data: initialTreeStateTissue } = useCellOntologyTreeStateTissue(
     tissueId ?? ""
   );
-  // (alec) This now handles the case where the initial tree state for both cell type and tissue is defined. We take the intersection of isExpanded and union of notShownWhenExpanded.
+
   const initialTreeState: CellOntologyTreeStateResponse | undefined =
     useMemo(() => {
       let initialTreeState;
       if (initialTreeStateCell && initialTreeStateTissue) {
-        // Intersection of isExpandedNodes
-        const isExpandedIntersection =
-          initialTreeStateCell.isExpandedNodes.filter((node) =>
-            initialTreeStateTissue.isExpandedNodes.includes(node)
-          );
-
-        // Union of notShownWhenExpandedNodes
-        const notShownWhenExpandedUnion: {
-          [key: string]: string[];
-        } = { ...initialTreeStateCell.notShownWhenExpandedNodes };
-
-        for (const key of Object.keys(
-          initialTreeStateTissue.notShownWhenExpandedNodes
-        )) {
-          if (notShownWhenExpandedUnion[key]) {
-            // If the key exists in both, merge the arrays and de-duplicate
-            notShownWhenExpandedUnion[key] = Array.from(
-              new Set([
-                ...notShownWhenExpandedUnion[key],
-                ...initialTreeStateTissue.notShownWhenExpandedNodes[key],
-              ])
-            );
-          } else {
-            // If the key exists only in the tissue data, add it to the union
-            notShownWhenExpandedUnion[key] =
-              initialTreeStateTissue.notShownWhenExpandedNodes[key];
-          }
-        }
-
+        // When both cell and tissue tree states are available, inject the tissue tree counts
+        // into the cell tree state.
         initialTreeState = {
-          isExpandedNodes: isExpandedIntersection,
-          notShownWhenExpandedNodes: notShownWhenExpandedUnion,
-          tissueCounts: initialTreeStateTissue.tissueCounts, // Only specified for tissueId
+          ...initialTreeStateCell,
+          tissueCounts: initialTreeStateTissue.tissueCounts,
         };
       } else if (initialTreeStateCell) {
         initialTreeState = initialTreeStateCell;
@@ -260,7 +186,6 @@ export default function OntologyDagView({
     if (!treeData) return null;
     return hierarchy(treeData, (d) => {
       if (d.isExpanded && d.children && initialTreeState) {
-        const newChildren: TreeNodeWithState[] = [];
         const notShownWhenExpandedNodes =
           initialTreeState.notShownWhenExpandedNodes;
         /**
@@ -271,20 +196,27 @@ export default function OntologyDagView({
          * It indicates that all of the children of the node should be shown.
          */
 
-        for (const child of d.children) {
-          if (
+        const hiddenChildren = d.children.filter(
+          (child) =>
+            !d.showAllChildren &&
+            notShownWhenExpandedNodes[d.id]?.includes(child.id)
+        );
+
+        const newChildren = d.children.filter(
+          (child) =>
             d.showAllChildren ||
             !notShownWhenExpandedNodes[d.id]?.includes(child.id)
-          ) {
-            newChildren.push(child);
-          }
-        }
+        );
 
-        const numHiddenChildren = d.children.length - newChildren.length;
-        if (numHiddenChildren > 0) {
+        if (
+          hiddenChildren.length <=
+          MINIMUM_NUMBER_OF_HIDDEN_CHILDREN_FOR_DUMMY_NODE
+        ) {
+          newChildren.push(...hiddenChildren);
+        } else if (hiddenChildren.length > 0) {
           newChildren.push({
             id: `dummy-child-${d.id}`,
-            name: `${numHiddenChildren} cell types`,
+            name: `${hiddenChildren.length} cell types`,
             n_cells: 0,
             n_cells_rollup: 0,
             isExpanded: false,
@@ -409,6 +341,7 @@ export default function OntologyDagView({
                 data-testid={
                   CELL_GUIDE_CARD_ONTOLOGY_DAG_VIEW_FULLSCREEN_BUTTON
                 }
+                isFullScreen={isFullScreen}
                 onClick={isFullScreen ? disableFullScreen : enableFullScreen}
               >
                 {isFullScreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
@@ -423,13 +356,13 @@ export default function OntologyDagView({
                   <div data-testid={CELL_GUIDE_CARD_ONTOLOGY_DAG_VIEW_TOOLTIP}>
                     <b>{tooltipData?.n_cells}</b>
                     {" cells"}
-                    {tissueName ? ` in ${tissueName}` : ""}
+                    {tissueName ? ` in ${tissueName.toLowerCase()}` : ""}
                     {tooltipData?.n_cells !== tooltipData?.n_cells_rollup && (
                       <>
                         <br />
                         <b>{tooltipData?.n_cells_rollup}</b>
                         {" descendant cells"}
-                        {tissueName ? ` in ${tissueName}` : ""}
+                        {tissueName ? ` in ${tissueName.toLowerCase()}` : ""}
                       </>
                     )}
                   </div>
