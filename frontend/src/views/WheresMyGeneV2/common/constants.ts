@@ -1,6 +1,13 @@
 export const GENE_SEARCH_BAR_HEIGHT_PX = 32;
 export const HEATMAP_CONTAINER_ID = "heatmap-container-id";
 export const FMG_GENE_STRENGTH_THRESHOLD = 0.5;
+export const FMG_SPECIFICITY_THRESHOLD = 0.0;
+export const GENE_LABEL_WIDTH_PX = 20;
+export const GENE_SEARCH_LEFT_OFFSET_PX = 24;
+export const LOADER_WITH_LABEL_THRESHOLD = 13;
+export const LOADER_WITH_LABEL_OFFSET_PX = 80;
+export const LOADER_NO_LABEL_OFFSET_PX = 85;
+export const LOADER_LABEL_TEXT = "Loading Data...";
 
 /**
  * (thuang): The `id` options here must match what the BE expects
@@ -32,7 +39,7 @@ export const X_AXIS_CHART_HEIGHT_PX_SVG = 30;
 // Increasing this value adds more space between the gene label and icons
 export const X_AXIS_HOVER_CONTAINER_HEIGHT_PX = 40;
 
-export const MARGIN_BETWEEN_HEATMAPS = 8;
+export const MARGIN_BETWEEN_HEATMAPS = 4;
 
 // Below constants are for left sidebar tooltip text so that tests can import these strings from this file instead
 export const SELECT_TISSUE_GENE_TEXT =
@@ -45,3 +52,5 @@ export const SORT_CELL_TYPES_TOOLTIP_TEXT =
   "Sort cell types by Cell Ontology or Hierarchical ordering. Cell ontology ordering groups cell types together based on their ontological relationships. Hierarchical ordering groups cell types with similar expression patterns together based on the genes selected.";
 export const SORT_GENES_TOOLTIP_TEXT =
   "Sort genes As Entered or using Hierarchical ordering. Genes are displayed in the order they are added to the dot plot using As Entered ordering. Hierarchical ordering groups genes with similar expression patterns together.";
+
+export const HOVER_START_TIME_MS = 2 * 1000;

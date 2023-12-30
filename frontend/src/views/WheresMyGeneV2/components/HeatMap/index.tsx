@@ -2,22 +2,13 @@ import { memo } from "react";
 
 import { Tissue } from "src/views/WheresMyGeneV2/common/types";
 import YAxisChart from "./components/YAxisChart";
-
-import {
-  CellTypeTagContainer,
-  ChartWrapper,
-  Container,
-  ContainerWrapper,
-  StyledTag,
-  XAxisMask,
-  YAxisWrapper,
-} from "src/views/WheresMyGeneV2/components/HeatMap/style";
 import { CellCountLabel } from "src/views/WheresMyGeneV2/components/HeatMap/components/XAxisChart/style";
 import {
   HEATMAP_CONTAINER_ID,
+  LOADER_WITH_LABEL_THRESHOLD,
+  LOADER_LABEL_TEXT,
   MARGIN_BETWEEN_HEATMAPS,
 } from "src/views/WheresMyGeneV2/common/constants";
-import Loader from "src/views/WheresMyGeneV2/components/Loader";
 import XAxisChart from "src/views/WheresMyGeneV2/components/HeatMap/components/XAxisChart";
 import Chart from "src/views/WheresMyGeneV2/components/HeatMap/components/Chart";
 import { hyphenize } from "src/views/WheresMyGeneV2/components/HeatMap/utils";
@@ -25,9 +16,20 @@ import { EXCLUDE_IN_SCREENSHOT_CLASS_NAME } from "../GeneSearchBar/components/Sa
 import { Autocomplete } from "@czi-sds/components";
 import {
   CellTypeFilterContainer,
+  CellTypeTagContainer,
+  ChartWrapper,
+  Container,
+  ContainerWrapper,
   Divider,
+  LoadingContainer,
+  LoadingLabel,
+  LoadingSpinner,
+  LoadingWrapper,
+  StyledTag,
   TopLeftCornerMask,
+  XAxisMask,
   XAxisWrapper,
+  YAxisWrapper,
 } from "./style";
 
 import { useConnect } from "src/views/WheresMyGeneV2/components/HeatMap/connect";
@@ -52,6 +54,7 @@ export default memo(function HeatMap(props: Props): JSX.Element {
     chartWrapperRef,
     expandedTissueIds,
     filteredCellTypes,
+    geneCount,
     generateMarkerGenes,
     handleCellTypeDelete,
     handleExpandCollapse,
@@ -61,6 +64,7 @@ export default memo(function HeatMap(props: Props): JSX.Element {
     selectedCellTypeOptions,
     setIsLoading,
     sortedGeneNames,
+    totalElementsCount,
     uniqueCellTypes,
     xAxisHeight,
   } = useConnect(props);
@@ -97,7 +101,6 @@ export default memo(function HeatMap(props: Props): JSX.Element {
           <CellCountLabel>Cell Count</CellCountLabel>
         </TopLeftCornerMask>
         <Container {...{ className }} id={HEATMAP_CONTAINER_ID}>
-          {isLoadingAPI || isAnyTissueLoading(isLoading) ? <Loader /> : null}
           <XAxisWrapper id="x-axis-wrapper">
             <XAxisMask data-testid="x-axis-mask" height={xAxisHeight} />
             <XAxisChart
@@ -105,7 +108,7 @@ export default memo(function HeatMap(props: Props): JSX.Element {
               sidebarWidth={sidebarWidth}
             />
           </XAxisWrapper>
-          <YAxisWrapper top={0}>
+          <YAxisWrapper top={xAxisHeight}>
             {allTissueCellTypes.map(
               ({ tissueId, tissueName, tissueCellTypes }) => {
                 return (
@@ -122,7 +125,33 @@ export default memo(function HeatMap(props: Props): JSX.Element {
               }
             )}
           </YAxisWrapper>
-          <ChartWrapper ref={chartWrapperRef} top={xAxisHeight}>
+          {(isLoadingAPI || isAnyTissueLoading(isLoading)) && (
+            <ChartWrapper
+              top={xAxisHeight}
+              visible={
+                (isLoadingAPI || isAnyTissueLoading(isLoading)) && geneCount > 0
+              }
+            >
+              <LoadingContainer height={totalElementsCount} width={geneCount}>
+                <LoadingWrapper
+                  geneCount={geneCount}
+                  sidebarWidth={sidebarWidth}
+                >
+                  <LoadingSpinner />
+                  <LoadingLabel
+                    visible={geneCount > LOADER_WITH_LABEL_THRESHOLD}
+                  >
+                    {LOADER_LABEL_TEXT}
+                  </LoadingLabel>
+                </LoadingWrapper>
+              </LoadingContainer>
+            </ChartWrapper>
+          )}
+          <ChartWrapper
+            ref={chartWrapperRef}
+            top={xAxisHeight}
+            visible={!isAnyTissueLoading(isLoading) && !isLoadingAPI}
+          >
             {allTissueCellTypes.map(({ tissueName, tissueCellTypes }) => {
               const selectedGeneData =
                 orderedSelectedGeneExpressionSummariesByTissueName[tissueName];

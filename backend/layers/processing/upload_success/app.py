@@ -6,7 +6,7 @@ from backend.layers.persistence.persistence import DatabaseProvider
 from backend.layers.processing.upload_failures.app import handle_failure
 
 database_provider = DatabaseProvider()
-business_logic = BusinessLogic(database_provider, None, None, None, None)
+business_logic = BusinessLogic(database_provider, None, None, None, None, None)
 
 logger = logging.getLogger("processing")
 
@@ -28,5 +28,7 @@ def success_handler(events: dict, context) -> None:
         handle_failure(seurat_job, context, delete_artifacts=False)
     else:
         business_logic.update_dataset_version_status(
-            DatasetVersionId(cxg_job["dataset_id"]), DatasetStatusKey.PROCESSING, DatasetProcessingStatus.SUCCESS
+            DatasetVersionId(cxg_job["dataset_version_id"]),
+            DatasetStatusKey.PROCESSING,
+            DatasetProcessingStatus.SUCCESS,
         )

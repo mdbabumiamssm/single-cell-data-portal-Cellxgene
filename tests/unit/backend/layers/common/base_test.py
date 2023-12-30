@@ -4,8 +4,9 @@ import typing
 import unittest
 from dataclasses import dataclass
 from typing import List, Optional
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
+from backend.common.corpora_config import CorporaConfig
 from backend.layers.business.business import BusinessLogic
 from backend.layers.common.entities import (
     CollectionId,
@@ -24,6 +25,7 @@ from backend.layers.common.entities import (
 )
 from backend.layers.persistence.persistence import DatabaseProvider
 from backend.layers.persistence.persistence_mock import DatabaseProviderMock
+from backend.layers.thirdparty.batch_job_provider import BatchJobProviderInterface
 from backend.layers.thirdparty.crossref_provider import CrossrefProviderInterface
 from backend.layers.thirdparty.s3_provider_interface import S3ProviderInterface
 from backend.layers.thirdparty.step_function_provider import StepFunctionProviderInterface
@@ -77,15 +79,18 @@ class BaseTest(unittest.TestCase):
     def setUp(self):
         super().setUp()
         os.environ.setdefault("APP_NAME", "corpora-api")
-
+        config = {
+            "upload_max_file_size_gb": 30,
+            "collections_base_url": "https://domain",
+            "dataset_assets_base_url": "http://domain",
+            "citation_update_feature_flag": "True",
+            "schema_4_feature_flag": "True",
+        }
         # Mock CorporaConfig
         # TODO: deduplicate with base_api
-        def mock_config_fn(name):
-            if name == "upload_max_file_size_gb":
-                return 30
 
-        self.mock_config = patch("backend.common.corpora_config.CorporaConfig.__getattr__", side_effect=mock_config_fn)
-        self.mock_config.start()
+        self.mock_config = CorporaConfig()
+        self.mock_config.set(config)
 
         from backend.layers.common import validation
 
@@ -102,6 +107,7 @@ class BaseTest(unittest.TestCase):
             self.database_provider = DatabaseProviderMock()
 
         self.crossref_provider = CrossrefProviderInterface()
+        batch_job_provider = BatchJobProviderInterface()
         step_function_provider = StepFunctionProviderInterface()
         self.s3_provider = S3ProviderInterface()
         self.uri_provider = UriProviderInterface()
@@ -159,12 +165,17 @@ class BaseTest(unittest.TestCase):
         )
 
         self.business_logic = BusinessLogic(
-            self.database_provider, self.crossref_provider, step_function_provider, self.s3_provider, self.uri_provider
+            self.database_provider,
+            batch_job_provider,
+            self.crossref_provider,
+            step_function_provider,
+            self.s3_provider,
+            self.uri_provider,
         )
 
     def tearDown(self):
         super().tearDown()
-        self.mock_config.stop()
+        self.mock_config.reset()
         if self.run_as_integration:
             self.database_provider._drop_schema()
 
@@ -280,6 +291,7 @@ class BaseTest(unittest.TestCase):
             )
         if artifacts is None:
             artifacts = [
+                DatasetArtifactUpdate(DatasetArtifactType.RAW_H5AD, f"s3://fake.bucket/{dataset_version_id}/raw.h5ad"),
                 DatasetArtifactUpdate(DatasetArtifactType.H5AD, f"s3://fake.bucket/{dataset_version_id}/local.h5ad"),
                 DatasetArtifactUpdate(DatasetArtifactType.CXG, f"s3://fake.bucket/{dataset_version_id}/local.cxg"),
                 DatasetArtifactUpdate(DatasetArtifactType.RDS, f"s3://fake.bucket/{dataset_version_id}/local.rds"),

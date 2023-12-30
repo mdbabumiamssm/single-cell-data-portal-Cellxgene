@@ -38,16 +38,9 @@ class SchemaMigrate(ProcessingLogic):
         self.limit_migration = os.environ.get("LIMIT_MIGRATION", 0)  # Run a small migration for testing
         self.schema_version = schema_validator.get_current_schema_version()
 
-    def limit_collections(self) -> Iterable[CollectionVersion]:
+    def fetch_collections(self) -> Iterable[CollectionVersion]:
         published_collections = [*self.business_logic.get_collections(CollectionQueryFilter(is_published=True))]
         unpublished_collections = [*self.business_logic.get_collections(CollectionQueryFilter(is_published=False))]
-        limit = int(self.limit_migration) if isinstance(self.limit_migration, str) else self.limit_migration
-        if limit > 0:
-            select = limit // 2
-            if len(unpublished_collections) >= select:
-                unpublished_collections = random.sample(unpublished_collections, limit // 2)
-            if len(published_collections) >= select:
-                published_collections = random.sample(published_collections, limit // 2)
         return itertools.chain(unpublished_collections, published_collections)
 
     def gather_collections(self, auto_publish: bool) -> List[Dict[str, str]]:
@@ -69,7 +62,7 @@ class SchemaMigrate(ProcessingLogic):
 
         has_revision = set()
         # iterates over unpublished collections first, so published versions are skipped if there is an active revision
-        for collection in self.limit_collections():
+        for collection in self.fetch_collections():
             _resp = {}
             if collection.is_published() and collection.collection_id.id in has_revision:
                 continue
@@ -93,6 +86,12 @@ class SchemaMigrate(ProcessingLogic):
                 collection_version_id=collection.version_id.id,
             )
             response.append(_resp)
+
+        # For testing purposes, only migrate a randomly sampled subset of the collections gathered
+        limit = int(self.limit_migration) if isinstance(self.limit_migration, str) else self.limit_migration
+        if limit > 0:
+            response = random.sample(response, limit)
+
         return response
 
     def dataset_migrate(
@@ -121,10 +120,10 @@ class SchemaMigrate(ProcessingLogic):
             CollectionVersionId(collection_version_id),
             uri,
             file_size=0,  # TODO: this shouldn't be needed but it gets around a 404 for HeadObject
-            existing_dataset_version_id=DatasetVersionId(dataset_version_id),
+            current_dataset_version_id=DatasetVersionId(dataset_version_id),
             start_step_function=False,  # The schema_migration sfn will start the ingest sfn
         )
-        sfn_name = sfn_name_generator(dataset_version_id, prefix="migrate")
+        sfn_name = sfn_name_generator(new_dataset_version_id, prefix="migrate")
         return {
             "collection_version_id": collection_version_id,
             "dataset_version_id": new_dataset_version_id.id,

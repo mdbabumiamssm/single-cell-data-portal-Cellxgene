@@ -1,6 +1,9 @@
 import Link from "next/link";
 import React from "react";
-import { useProjects } from "src/common/queries/censusDirectory";
+import {
+  type Project as ProjectType,
+  useProjects,
+} from "src/common/queries/censusDirectory";
 
 import staticProjects from "census-projects.json";
 import {
@@ -10,57 +13,106 @@ import {
   TierContainer,
   TierTitle,
   TierDescription,
-} from "./styles";
+} from "./style";
 import Project from "./components/Project";
+import { clobberAndDifferentiateProjectMetadata } from "./utils";
+import { track } from "src/common/analytics";
+import { EVENTS } from "src/common/analytics/events";
 
 function CensusDirectory() {
   const { data: projects } = useProjects();
 
-  const hostedProjects = Object.entries(projects || {}).filter(
-    ([_, project]) => !project.revised_by
+  const hostedProjects = clobberAndDifferentiateProjectMetadata(
+    Object.values(projects ?? ({} as ProjectType[])).filter(
+      (project) => !project.revised_by
+    )
   );
 
-  const communityProjects = Object.values(staticProjects).filter(
-    (project) => project.tier === 1
+  const communityProjects = clobberAndDifferentiateProjectMetadata(
+    Object.values(staticProjects).filter(
+      (project) => project.tier === "community"
+    )
   );
-  const maintainedProjects = Object.values(staticProjects).filter(
-    (project) => project.tier === 3
+  const maintainedProjects = clobberAndDifferentiateProjectMetadata(
+    Object.values(staticProjects).filter(
+      (project) => project.tier === "maintained"
+    )
   );
 
   return (
     <Content>
-      <Header>Census Spotlight</Header>
+      <Header>Census Models</Header>
       <DirectoryDescription>
-        This page features models and integrated embeddings of the Census data
-        corpus, organized by CELL×GENE’s level of involvement with their
-        maintenance and availability. <br />
-        <br /> If you’d like to have your project featured here, please{" "}
-        <Link href="mailto:cellxgene@chanzuckerberg.com">get in touch</Link>!
+        <p>
+          This page features models and integrated embeddings of the Census data
+          corpus, organized by CELL×GENE’s level of involvement with their
+          maintenance and availability. These models are breaking new ground and
+          will continue to improve. We encourage you to try out these models and
+          provide feedback!
+        </p>
+        <p>
+          Please{" "}
+          <a
+            href="https://chanzuckerberg.github.io/cellxgene-census/examples.html"
+            target="__blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              track(EVENTS.CENSUS_MODELS_TUTORIALS_CLICKED);
+            }}
+          >
+            see these tutorials
+          </a>{" "}
+          for usage details.
+        </p>
+        <p>
+          If you’d like to have your project featured here, please{" "}
+          <Link href="mailto:soma@chanzuckerberg.com">get in touch</Link>.
+        </p>
       </DirectoryDescription>
       {maintainedProjects.length > 0 && (
         <TierContainer>
-          <TierTitle>CELL×GENE Maintained Projects</TierTitle>
+          <TierTitle>CELL×GENE Collaboration Projects</TierTitle>
           <TierDescription>
-            These projects are actively maintained and regularly updated by
-            CELLxGENE in close collaboration with their creators. Embeddings are
-            accessible via the Census API; models are available via
-            CELLxGENE-maintained links.
+            These models and their output embeddings are ongoing collaborations.
+            CZI and the partner labs are improving the models as the Census
+            resource grows. Embeddings are accessible via the Census API;
+            corresponding models are available for download.
+            <br />
+            Please{" "}
+            <Link href="mailto:soma@chanzuckerberg.com">
+              contact the CELL×GENE team with feedback
+            </Link>
+            .
           </TierDescription>
-          {maintainedProjects.map((project) => (
-            <Project key={project.title} project={project} />
+          {maintainedProjects.map((clobberedProjects) => (
+            <Project
+              key={clobberedProjects[0].id}
+              clobberedProjects={clobberedProjects}
+            />
           ))}
         </TierContainer>
       )}
       {hostedProjects.length > 0 && (
         <TierContainer>
-          <TierTitle>CELLxGENE Hosted Projects</TierTitle>
+          <TierTitle>CELL×GENE Hosted Projects</TierTitle>
           <TierDescription>
-            CELLxGENE makes these projects available, but does not actively
-            maintain or update them. Embeddings are accessible via the Census
-            API; models are available via CELLxGENE-maintained links.
+            CELL×GENE makes these embeddings directly available through the
+            Census API, but does not actively maintain or update them.
+            Corresponding models are accessible via external links (when
+            available).
+            <br />
+            For issues accessing these embeddings, please{" "}
+            <Link href="mailto:soma@chanzuckerberg.com">
+              contact the CELL×GENE team
+            </Link>
+            . For feedback on the embeddings themselves, please contact the
+            creators.
           </TierDescription>
-          {hostedProjects.map(([id, project]) => (
-            <Project key={id} id={id} project={project} />
+          {hostedProjects.map((clobberedProjects) => (
+            <Project
+              key={clobberedProjects[0].id}
+              clobberedProjects={clobberedProjects}
+            />
           ))}
         </TierContainer>
       )}
@@ -69,11 +121,16 @@ function CensusDirectory() {
           <TierTitle>Community Projects</TierTitle>
           <TierDescription>
             The community has also developed many wonderful projects using
-            Census data. While CELLxGENE does not directly host or maintain
+            Census data. While CELL×GENE does not directly host or maintain
             these projects, we’re excited to showcase them here.
+            <br />
+            Please contact their creators with questions or feedback.
           </TierDescription>
-          {communityProjects.map((project) => (
-            <Project key={project.title} project={project} />
+          {communityProjects.map((clobberedProjects) => (
+            <Project
+              key={clobberedProjects[0].id}
+              clobberedProjects={clobberedProjects}
+            />
           ))}
         </TierContainer>
       )}

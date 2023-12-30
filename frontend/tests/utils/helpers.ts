@@ -53,6 +53,7 @@ export const shouldUseRdevToken =
   process.env.RDEV_TOKEN === "true" || TEST_ENV === "rdev";
 
 export const TIMEOUT_MS = 3 * 1000;
+export const WAIT_FOR_TIMEOUT_MS = 3 * 1000;
 
 // (seve): We use TEST_ENV to describe the environment that playwright is running against. Sometimes the FE tests are run against a local instance of the app which points at a deployed instance of the backend.
 
@@ -495,6 +496,12 @@ export async function takeSnapshotOfMetaTags(name: string, page: Page) {
         )
       ).sort();
 
+      /**
+       * (thuang): Whenever snapshot updates, make sure to update the snapshot
+       * for linux files as well.
+       * NOTE: I had to use `cp FILE_NAME-darwin.txt FILE_NAME-linux.txt` to copy
+       * to avoid failed snapshot test in GHA for some reason
+       */
       expect(JSON.stringify(allMetaTagsHTML)).toMatchSnapshot({
         name: name + "-seoMetaTags.txt",
       });
@@ -539,4 +546,34 @@ export async function collapseTissue(page: Page, tissueName: string) {
 
 export async function waitForLoadingSpinnerToResolve(page: Page) {
   await page.getByText("Loading").first().waitFor({ state: "hidden" });
+}
+
+export async function isElementVisible(page: Page, testId: string) {
+  await tryUntil(
+    async () => {
+      const element = page.getByTestId(testId);
+      await element.waitFor({ timeout: WAIT_FOR_TIMEOUT_MS });
+      const isVisible = await element.isVisible();
+      expect(isVisible).toBe(true);
+    },
+    { page }
+  );
+}
+
+export async function checkTooltipContent(page: Page, text: string) {
+  // check role tooltip is visible
+  const tooltipLocator = page.getByRole("tooltip");
+
+  await tryUntil(
+    async () => {
+      await tooltipLocator.waitFor({ timeout: WAIT_FOR_TIMEOUT_MS });
+      const tooltipLocatorVisible = await tooltipLocator.isVisible();
+      expect(tooltipLocatorVisible).toBe(true);
+    },
+    { page }
+  );
+
+  // check that tooltip contains text
+  const tooltipText = await tooltipLocator.textContent();
+  expect(tooltipText).toContain(text);
 }

@@ -17,19 +17,17 @@ if FeatureFlagService.is_enabled(FeatureFlagValues.SCHEMA_4):
 
 To mock a feature flag in a test:
 ```
-def mock_config_fn(name):
-    if name == FeatureFlagValues.SCHEMA_4:
-        return "True"
-
-self.mock_config = patch.object(FeatureFlagService, "is_enabled", side_effect=mock_config_fn)
+self.mock_config = CorporaConfig()
+self.mock_config.set(dict(schema_4_feature_flag="True"))
 ```
 """
 
-FeatureFlag = Literal["schema_4_feature_flag"]
+FeatureFlag = Literal["schema_4_feature_flag", "citation_update_feature_flag"]
 
 
 class FeatureFlagValues:
     SCHEMA_4 = "schema_4_feature_flag"
+    CITATION_UPDATE = "citation_update_feature_flag"
 
 
 class FeatureFlagService:

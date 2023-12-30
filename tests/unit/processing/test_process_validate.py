@@ -11,13 +11,12 @@ from backend.layers.common.entities import (
 )
 from backend.layers.processing.process import ProcessMain
 from backend.layers.processing.process_validate import ProcessValidate
-from tests.unit.processing.base_processing_test import BaseProcessingTest, mock_config_fn
+from tests.unit.processing.base_processing_test import BaseProcessingTest
 
 
 class ProcessingTest(BaseProcessingTest):
     @patch("scanpy.read_h5ad")
-    @patch("backend.common.corpora_config.CorporaConfig.__getattr__", side_effect=mock_config_fn)
-    def test_process_download_validate_success(self, mock_config, mock_read_h5ad):
+    def test_process_download_validate_success(self, mock_read_h5ad):
         """
         ProcessDownloadValidate should:
         1. Download the h5ad artifact
@@ -52,7 +51,7 @@ class ProcessingTest(BaseProcessingTest):
             citation_str = (
                 f"Publication: http://doi.org/12.2345 "
                 f"Dataset Version: http://domain/{dataset_version_id}.h5ad curated and distributed by "
-                f"CZ CELLxGENE Discover in Collection: http://collections/{collection.version_id}"
+                f"CZ CELLxGENE Discover in Collection: https://domain/collections/{collection.collection_id.id}"
             )
             self.assertEqual(mock_read_h5ad.return_value.uns["citation"], citation_str)
             status = self.business_logic.get_dataset_status(dataset_version_id)
@@ -71,8 +70,7 @@ class ProcessingTest(BaseProcessingTest):
             artifact.uri = f"s3://fake_bucket_name/{dataset_version_id.id}/local.h5ad"
 
     @patch("scanpy.read_h5ad")
-    @patch("backend.common.corpora_config.CorporaConfig.__getattr__", side_effect=mock_config_fn)
-    def test_populate_dataset_citation__no_publication_doi(self, mock_config, mock_read_h5ad):
+    def test_populate_dataset_citation__no_publication_doi(self, mock_read_h5ad):
         mock_read_h5ad.return_value = MagicMock(uns=dict())
         collection = self.generate_unpublished_collection()
 
@@ -81,7 +79,7 @@ class ProcessingTest(BaseProcessingTest):
         pdv.populate_dataset_citation(collection.version_id, dataset_version_id, "")
         citation_str = (
             f"Dataset Version: http://domain/{dataset_version_id}.h5ad curated and distributed by "
-            f"CZ CELLxGENE Discover in Collection: http://collections/{collection.version_id}"
+            f"CZ CELLxGENE Discover in Collection: https://domain/collections/{collection.collection_id.id}"
         )
         self.assertEqual(mock_read_h5ad.return_value.uns["citation"], citation_str)
 

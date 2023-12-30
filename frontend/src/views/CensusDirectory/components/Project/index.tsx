@@ -1,66 +1,106 @@
-import Link from "next/link";
 import { type Project } from "src/common/queries/censusDirectory";
 import {
   ProjectContainer,
   ProjectDetails,
   ProjectTitle,
   ProjectSubmitter,
-  ProjectDesctiption,
+  ProjectDescription,
   DetailsContainer,
-  ProjectButtons,
-  StyledButton,
-} from "../../styles";
+} from "../../style";
 import DetailItem from "../DetailItem";
-
-import EmbeddingButton from "../EmbeddingButton";
 
 import { ProjectProps } from "./types";
 import { useConnect } from "./connect";
+import { track } from "src/common/analytics";
+import { EVENTS } from "src/common/analytics/events";
+import ProjectButtons from "./ProjectButtons";
 
-const Project = ({ project, id }: ProjectProps) => {
-  const { date, projectNotebookLinks } = useConnect({ project, id });
+const DATA_TYPE_TO_EMBEDDING: { [key: string]: string } = {
+  obs_embedding: "obs",
+  var_embedding: "var",
+};
+
+const Project = ({ clobberedProjects }: ProjectProps) => {
+  const {
+    date,
+    projectNotebookLinks,
+    projectTier,
+    authorsString,
+    sharedProject,
+  } = useConnect({
+    clobberedProjects,
+  });
 
   return (
-    <ProjectContainer key={project.title}>
+    <ProjectContainer key={sharedProject.title}>
       <ProjectDetails>
-        <ProjectTitle>{project.title}</ProjectTitle>
-        <ProjectSubmitter>{project.contact_affiliation}</ProjectSubmitter>
-        <ProjectDesctiption>{project.description}</ProjectDesctiption>
+        <ProjectTitle>{sharedProject.title}</ProjectTitle>
+        <ProjectSubmitter>{authorsString}</ProjectSubmitter>
+        <ProjectDescription>{sharedProject.description}</ProjectDescription>
         <DetailsContainer>
-          <DetailItem label="contact" link={project.contact_email}>
-            {project.contact_name}
+          <DetailItem
+            label="contact"
+            link={"mailto:" + sharedProject.primary_contact?.email}
+            onClick={() => {
+              track(EVENTS.CENSUS_CONTACT_CLICKED, {
+                project: sharedProject.title,
+                contact: sharedProject.primary_contact?.name,
+              });
+            }}
+          >
+            {sharedProject.primary_contact?.name}
           </DetailItem>
-          <DetailItem label="publication" link={project.publication_link}>
-            {project.publication_info}
+          <DetailItem
+            label="publication"
+            link={sharedProject.publication_link}
+            onClick={() => {
+              track(EVENTS.CENSUS_PUBLICATION_CLICKED, {
+                publication: sharedProject.publication_info,
+                project: sharedProject.title,
+              });
+            }}
+          >
+            {sharedProject.publication_info}
           </DetailItem>
           <DetailItem label="Last Updated">{date}</DetailItem>
         </DetailsContainer>
         <DetailsContainer>
           <DetailItem label="Census Version">
-            {project.census_version}
+            {sharedProject.census_version}
           </DetailItem>
-          <DetailItem label="experiment">{project.experiment_name}</DetailItem>
+          <DetailItem label="organism">
+            {sharedProject.experiment_name}
+          </DetailItem>
           <DetailItem label="measurement">
-            {project.measurement_name}
+            {sharedProject.measurement_name}
           </DetailItem>
-          <DetailItem label="embedding">{project.data_type}</DetailItem>
+          <DetailItem label="embedding">
+            {sharedProject.data_type
+              ? DATA_TYPE_TO_EMBEDDING[sharedProject.data_type]
+              : undefined}
+          </DetailItem>
           {projectNotebookLinks?.map((link) => (
-            <DetailItem label="notebook" link={link[1]} key={link[1]}>
+            <DetailItem
+              label="notebook"
+              link={link[1]}
+              key={link[1]}
+              onClick={() => {
+                track(EVENTS.CENSUS_NOTEBOOK_CLICKED, {
+                  project: sharedProject.title,
+                  category: projectTier,
+                  notebook: link[0],
+                });
+              }}
+            >
               {link[0]}
             </DetailItem>
           ))}
+          <DetailItem label="cells">{sharedProject.n_cells}</DetailItem>
+          <DetailItem label="genes">{sharedProject.n_genes}</DetailItem>
+          <DetailItem label="columns">{sharedProject.n_columns}</DetailItem>
         </DetailsContainer>
       </ProjectDetails>
-      <ProjectButtons>
-        <EmbeddingButton />
-        {project.model_link && (
-          <Link href={project.model_link}>
-            <StyledButton sdsType="primary" sdsStyle="square">
-              Model
-            </StyledButton>
-          </Link>
-        )}
-      </ProjectButtons>
+      <ProjectButtons clobberedProjects={clobberedProjects} />
     </ProjectContainer>
   );
 };
